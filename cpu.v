@@ -7,14 +7,13 @@ module cpu(
 );
 
 wire[15:0] to_seven_segment;
-
 assign to_seven_segment =  reg_x[1];
 //assign inst_debug = inst;
 //assign load_debug = load;
 //assign pc_debug = reg_pc;
 
 memory mem(
-	.clk(cnt[24]),
+	.clk(clk),
 	.data_out(data_out),         
 	.address(to_memaddress),
 	.data_in(data_in),
@@ -146,7 +145,7 @@ always @(posedge clk)begin
 	clk_slow <= ~clk_slow;
 end
 
-always @(posedge cnt[24])begin
+always @(posedge clk)begin
 	reg_x[0] <= 1'b0;
 		
 	if(load == 1'b1)begin
@@ -316,10 +315,9 @@ always @(posedge cnt[24])begin
 				case(funct3)
 					3'b000:begin //add / sub
 						if(funct7 == 7'b0000000) alumode <= 3'b001;//add
-						else if(funct7 == 7'b0000001) alumode <= 3'b101;//sub
+						else if(funct7 == 7'b0100000) alumode <= 3'b101;//sub
 						else;
 						alu <= 1'b1;
-
 					end
 					3'b001:begin //sll
 						if(funct7 == 7'b0000000) reg_x[rd]<=real_reg_x[rs1] << real_reg_x[rs2];
@@ -367,5 +365,5 @@ always @(posedge cnt[24])begin
 end
 
 
-assign LED = ~{test,test,test,test};
+assign LED = ~reg_pc;
 endmodule
