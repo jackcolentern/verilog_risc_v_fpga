@@ -3,24 +3,23 @@ module cpu(
 	output[7:0] segments,
 	output[3:0] digits,
 	output[3:0]	 LED,
+	input switch_3,
+	input switch_4,
 	input button
 );
 
 wire[15:0] to_seven_segment;
-assign to_seven_segment = reg_x[1];
+assign to_seven_segment = real_reg_x[1];
 //assign inst_debug = inst;
 //assign load_debug = load;
 //assign pc_debug = reg_pc;
 
-wire clk_1000;
-
-
 memory mem(
-	.clk(clk),
+	.clk(clk_main),
 	.data_out(data_out),         
 	.address(to_memaddress),
 	.data_in(data_in),
-	.write_enable(write_enable)
+	.write_enable(store)
 );
 
 seven_segment ss(
@@ -37,6 +36,18 @@ alu a(
 	.mode(alumode)
 );
 
+clock_gen cg(
+	.clk(clk),
+	.button(button),
+	.clk_out(clk_step)
+);
+
+wire clk_step;
+
+wire clk_main;
+
+assign clk_main = (~switch_4)?cnt[0]:(~switch_3)?cnt[20]:clk_step;
+
 wire [31:0] aluout;
 reg [31:0] aluin1;
 reg [31:0] aluin2;
@@ -45,9 +56,6 @@ reg [2:0] alumode;
 reg[31:0] address;
 wire[31:0] data_out;
 reg[31:0] data_in;
-wire write_enable;
-
-assign write_enable = store;
 
 reg[31:0] real_reg_x[0:31];
 reg[31:0] reg_x[0:31];
@@ -83,8 +91,6 @@ wire[31:0] simm_s;
 wire[31:0] simm_b;
 wire[31:0] simm_u;
 wire[31:0] simm_j;
-
-reg pc_address_select;
 
 wire[31:0] to_memaddress;
 
@@ -127,15 +133,9 @@ assign simm_j = {{11{imm_j[19]}},imm_j,1'b0};
 wire[7:0] load_ff = data_out & 8'hff;
 wire[15:0] load_ffff = data_out& 16'hffff;
 
-reg clk_slow;
-
 reg[31:0] cnt;
 
-//wire[31:0] funct3_old;
-//assign funct3_old = inst_old[14:12];
-
-
-always @(posedge clk_1000)begin
+always @(posedge clk)begin
 	cnt<= cnt+1;
 end
 
@@ -144,15 +144,11 @@ reg test;
 integer i;
 initial begin
 	for(i=0;i<32;i=i+1)reg_x[i]=0;	
-	pc_address_select <= 1'b0;
 	test <= 1'b0;
 end
 
-always @(posedge clk)begin
-	clk_slow <= ~clk_slow;
-end
 
-always @(posedge clk)begin
+always @(posedge clk_main)begin
 	if(load == 1'b1)begin
 		load <= 1'b0;
 		reg_pc <= reg_pc + 4;
@@ -251,6 +247,7 @@ always @(posedge clk)begin
 			
 			s: begin	
 				store <= 1'b1;
+				inst_old <= inst;
 				address <= real_reg_x[rs1] + simm_s;
 				case(funct3)
 					3'b000:begin //sb
