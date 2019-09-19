@@ -7,10 +7,13 @@ module cpu(
 );
 
 wire[15:0] to_seven_segment;
-assign to_seven_segment =  reg_x[1];
+assign to_seven_segment = reg_x[1];
 //assign inst_debug = inst;
 //assign load_debug = load;
 //assign pc_debug = reg_pc;
+
+wire clk_1000;
+
 
 memory mem(
 	.clk(clk),
@@ -91,7 +94,7 @@ reg store;
 
 reg alu;
 
-assign to_memaddress = (load || store)?(address>>2):(reg_pc>>2);
+assign to_memaddress = (load || store)?address:(reg_pc>>2);
 
 parameter lui = 7'b0110111;
 parameter auipc = 7'b0010111;
@@ -128,7 +131,11 @@ reg clk_slow;
 
 reg[31:0] cnt;
 
-always @(posedge clk)begin
+//wire[31:0] funct3_old;
+//assign funct3_old = inst_old[14:12];
+
+
+always @(posedge clk_1000)begin
 	cnt<= cnt+1;
 end
 
@@ -146,8 +153,6 @@ always @(posedge clk)begin
 end
 
 always @(posedge clk)begin
-	reg_x[0] <= 1'b0;
-		
 	if(load == 1'b1)begin
 		load <= 1'b0;
 		reg_pc <= reg_pc + 4;
@@ -236,7 +241,7 @@ always @(posedge clk)begin
 					
 					default:;
 				endcase
-			end
+			end 
 			
 			l: begin	
 				load <= 1'b1;
@@ -246,7 +251,6 @@ always @(posedge clk)begin
 			
 			s: begin	
 				store <= 1'b1;
-				inst_old <= inst;
 				address <= real_reg_x[rs1] + simm_s;
 				case(funct3)
 					3'b000:begin //sb
@@ -309,7 +313,6 @@ always @(posedge clk)begin
 			end
 			
 			r_type: begin
-				test<=1'b1;
 				aluin1 <= real_reg_x[rs1];
 				aluin2 <= real_reg_x[rs2];
 				case(funct3)
@@ -356,6 +359,7 @@ always @(posedge clk)begin
 						else;
 						alu <= 1'b1;
 					end
+				
 					default:;
 				endcase
 			end
@@ -365,5 +369,5 @@ always @(posedge clk)begin
 end
 
 
-assign LED = ~reg_pc;
+assign LED = ~(reg_pc >> 2);
 endmodule
