@@ -1,8 +1,8 @@
 
-module main(
-	input clk;
+module clock_gen(
+	input clk,
 	input button,
-	output button_debounced
+	output clk_out
 );
 reg[24:0]cnt;
 
@@ -20,6 +20,7 @@ always @(posedge clk) begin
 			button_debounced <= ~button_debounced;
 			button_prev <= button;
 		end
+		else;
 	end
 	else cnt <= 24'h000000;
 end
